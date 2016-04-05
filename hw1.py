@@ -49,25 +49,31 @@ class HMM:
 
         Returns
         -------
-        state_seq : the best state sequence for given observation list
+        state_seq : array, The best state sequence for given observation list
         """
         if time > len(ob_list):
             raise IndexError("Time cannot be more than length of observation list.")
 
         ob_list = self._get_ob_index(ob_list)   # Transform observation to index
         # Calculate probability of first observation for every state
-        prob_list = self._initial_ob_prob(ob_list[0])
-        best_seq = [prob_list.index(max(prob_list))]
+        max_prob = self._initial_ob_prob(ob_list[0])
+        pre_prob = max_prob[:]
+        path = [[i] for i in range(self.state_num)]
         for t in range(1, time):
+            new_path = [[] for i in range(self.state_num)]
             for j in range(self.state_num):
-                prob = [prob_list[i] * self.state_prob[i][j] for i in range(self.state_num)]
-                p = max(prob)
-                
-                prob_list[j] = p * self.ob_prob[j][ob_list[t]]
+                # Find maximum probability and the most possible previous state to transit to present state
+                p, state = max([(pre_prob[i] * self.state_prob[i][j], i) for i in range(self.state_num)])
+                # Calculate probability that present state to present observation
+                max_prob[j] = p * self.ob_prob[j][ob_list[t]]
+                # Choose the most possible path to present state
+                new_path[j] = path[state] + [j]
+            pre_prob = max_prob[:]
+            path = new_path
 
-            best_seq.append(prob_list.index(max(prob_list)))
-        return best_seq
-        pass
+        (prob, state) = max([(max_prob[i], i) for i in range(self.state_num)])
+        
+        return path[state]
 
     def _get_ob_index(self, observation):
         return [self.ob_list.index(i) for i in observation]  # Transform observation to index
@@ -87,7 +93,7 @@ def main():
 
     p = hmm.forward(["up", "up", "unchanged", "down", "unchanged", "down", "up"], 7)
     path = hmm.decode(["up", "up", "unchanged", "down", "unchanged", "down", "up"], 7)
-    print("hi{:.9f}".format(p))
+    print("hi{:.13f}".format(p))
     print(path)
 
 if __name__ == '__main__':
