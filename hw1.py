@@ -24,7 +24,7 @@ class HMM:
         if time > len(ob_list):
             raise IndexError("Time cannot be more than length of observation list.")
 
-        ob_list = [self.ob_list.index(i) for i in ob_list]  # Transform observation to integer type
+        ob_list = self._get_ob_index(ob_list)  # Transform observation to index
         # Calculate probability of first observation for every state
         prob_list = [self.init_prob[i] * self.ob_prob[i][ob_list[0]] for i in range(self.state_num)]
 
@@ -50,6 +50,16 @@ class HMM:
         -------
         state_seq : the best state sequence for given observation list
         """
+        if time > len(ob_list):
+            raise IndexError("Time cannot be more than length of observation list.")
+
+        ob_list = self._get_ob_index(ob_list)   # Transform observation to index
+        # Calculate probability of first observation for every state
+        prob_list = [self.init_prob[i] * self.ob_prob[i][ob_list[0]] for i in range(self.state_num)]
+
+    def _get_ob_index(self, observation):
+        return [self.ob_list.index(i) for i in observation]  # Transform observation to index
+
 
 def main():
     hmm = HMM(3, ('up', 'down', 'unchanged'))
