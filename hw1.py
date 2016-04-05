@@ -1,5 +1,5 @@
 class HMM:
-    """docstring for HMM"""
+    """Simple implement for Hidden Markov Model"""
     def __init__(self, state_num, observation_list):
         self.state_num = state_num
         self.init_prob = [0 for i in range(state_num)]                                  # Initial probability for choosing first state
@@ -35,6 +35,7 @@ class HMM:
                 p = sum([pre_prob[i] * self.state_prob[i][j] for i in range(self.state_num)])
                 # Calculate probability that present state to present observation
                 prob_list[j] = p * self.ob_prob[j][ob_list[t]]
+            # Record for changed probability
             pre_prob = prob_list[:]
         
         return sum(prob_list)
@@ -68,7 +69,9 @@ class HMM:
                 max_prob[j] = p * self.ob_prob[j][ob_list[t]]
                 # Choose the most possible path to present state
                 new_path[j] = path[state] + [j]
+            # Record for changed probability
             pre_prob = max_prob[:]
+            # Record for new path
             path = new_path
 
         (prob, state) = max([(max_prob[i], i) for i in range(self.state_num)])
@@ -90,11 +93,12 @@ def main():
     hmm.ob_prob = [[0.7, 0.1, 0.2],
                    [0.1, 0.6, 0.3],
                    [0.3, 0.3, 0.4]]
-
-    p = hmm.forward(["up", "up", "unchanged", "down", "unchanged", "down", "up"], 7)
-    path = hmm.decode(["up", "up", "unchanged", "down", "unchanged", "down", "up"], 7)
-    print("hi{:.13f}".format(p))
-    print(path)
+    observation = ["up", "up", "unchanged", "down", "unchanged", "down", "up"]
+    ob_length = len(observation)
+    p = hmm.forward(observation, ob_length)
+    path = hmm.decode(observation, ob_length)
+    print("P{} = {:.13f}".format(tuple(observation), p))
+    print("Observation sequence =", tuple(i+1 for i in path))
 
 if __name__ == '__main__':
     main()
