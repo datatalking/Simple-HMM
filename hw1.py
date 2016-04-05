@@ -21,4 +21,10 @@ class HMM:
 		-------
 		p : float, Probability of given observation.
 		"""
+		if time > len(ob_list):
+			raise IndexError("Time cannot be more than length of observation list.")
+
 		ob_list = [self.ob_list.index(i) for i in ob_list]	# Transform observation to integer type
+		# Calculate probability of first observation for every state
+		prob_list = [self.init_prob[i] * self.ob_prob[i][ob_list[0]] for i in range(self.state_num)]
+
