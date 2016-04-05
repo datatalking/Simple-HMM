@@ -26,16 +26,17 @@ class HMM:
 
         ob_list = self._get_ob_index(ob_list)  # Transform observation to index
         # Calculate probability of first observation for every state
-        prob_list = [self.init_prob[i] * self.ob_prob[i][ob_list[0]] for i in range(self.state_num)]
+        prob_list = self._initial_ob_prob(ob_list[0])
+        pre_prob = prob_list[:]
 
         for t in range(1, time):
             for j in range(self.state_num):
                 # Calculate probability that previous state probability transit to present state probability
-                p = sum([prob_list[i] * self.state_prob[i][j] for i in range(self.state_num)])
+                p = sum([pre_prob[i] * self.state_prob[i][j] for i in range(self.state_num)])
                 # Calculate probability that present state to present observation
                 prob_list[j] = p * self.ob_prob[j][ob_list[t]]
-                print(t, ob_list[t])
-
+            pre_prob = prob_list[:]
+        
         return sum(prob_list)
 
     def decode(self, ob_list, time):
@@ -55,11 +56,24 @@ class HMM:
 
         ob_list = self._get_ob_index(ob_list)   # Transform observation to index
         # Calculate probability of first observation for every state
-        prob_list = [self.init_prob[i] * self.ob_prob[i][ob_list[0]] for i in range(self.state_num)]
+        prob_list = self._initial_ob_prob(ob_list[0])
+        best_seq = [prob_list.index(max(prob_list))]
+        for t in range(1, time):
+            for j in range(self.state_num):
+                prob = [prob_list[i] * self.state_prob[i][j] for i in range(self.state_num)]
+                p = max(prob)
+                
+                prob_list[j] = p * self.ob_prob[j][ob_list[t]]
+
+            best_seq.append(prob_list.index(max(prob_list)))
+        return best_seq
+        pass
 
     def _get_ob_index(self, observation):
         return [self.ob_list.index(i) for i in observation]  # Transform observation to index
 
+    def _initial_ob_prob(self, ob_index):
+        return [self.init_prob[i] * self.ob_prob[i][ob_index] for i in range(self.state_num)]
 
 def main():
     hmm = HMM(3, ('up', 'down', 'unchanged'))
@@ -72,7 +86,9 @@ def main():
                    [0.3, 0.3, 0.4]]
 
     p = hmm.forward(["up", "up", "unchanged", "down", "unchanged", "down", "up"], 7)
-    print("{:.7f}".format(p))
+    path = hmm.decode(["up", "up", "unchanged", "down", "unchanged", "down", "up"], 7)
+    print("hi{:.9f}".format(p))
+    print(path)
 
 if __name__ == '__main__':
     main()
