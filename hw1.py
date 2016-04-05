@@ -30,5 +30,9 @@ class HMM:
 
 		for t in range(1, time):
 			for j in range(self.state_num):
-				# Calculate probability that previous observation probability transit to present observation probability
+				# Calculate probability that previous state probability transit to present state probability
 				p = sum([prob_list[i] * self.state_prob[i][j] for i in range(self.state_num)])
+				# Calculate probability that present state to present observation
+				prob_list[j] = p * self.ob_prob[j][ob_list[t]]
+
+		return sum(prob_list)
