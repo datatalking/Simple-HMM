@@ -28,3 +28,7 @@ class HMM:
 		# Calculate probability of first observation for every state
 		prob_list = [self.init_prob[i] * self.ob_prob[i][ob_list[0]] for i in range(self.state_num)]
 
+		for t in range(1, time):
+			for j in range(self.state_num):
+				# Calculate probability that previous observation probability transit to present observation probability
+				p = sum([prob_list[t-1][i] * self.state_prob[i][j] for i in range(self.state_num)])
