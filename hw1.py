@@ -38,6 +38,18 @@ class HMM:
 
         return sum(prob_list)
 
+    def decode(self, ob_list, time):
+        """Use viterbi algorithm to find the state sequence for a given observation list.
+
+        Parameters
+        ----------
+        ob_list : array-like, Observation list.
+        time : integer, Assign which time of observation list.
+
+        Returns
+        -------
+        state_seq : the best state sequence for given observation list
+        """
 
 def main():
     hmm = HMM(3, ('up', 'down', 'unchanged'))
