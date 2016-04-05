@@ -73,7 +73,7 @@ class HMM:
             pre_prob = max_prob[:]
             # Record for new path
             path = new_path
-
+        # Find the last state
         (prob, state) = max([(max_prob[i], i) for i in range(self.state_num)])
         
         return path[state]
