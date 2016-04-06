@@ -93,7 +93,7 @@ def main():
     hmm.ob_prob = [[0.7, 0.1, 0.2],
                    [0.1, 0.6, 0.3],
                    [0.3, 0.3, 0.4]]
-    observation = ["up", "up", "unchanged", "down", "unchanged", "down", "up"]
+    observation = ("up", "up", "unchanged", "down", "unchanged", "down", "up")
     ob_length = len(observation)
     p = hmm.forward(observation, ob_length)
     path = hmm.decode(observation, ob_length)
