@@ -46,6 +46,19 @@ class HMM:
 
         return sum(forward_prob[time-1])
 
+    def backward(self, ob_list, time):
+        """Use backward algorithm to evaluate probability of a given observation.
+
+        Parameters
+        ----------
+        ob_list : array-like, Observation list.
+        time : integer, Assign which time of observation list.
+
+        Returns
+        -------
+        p : float, Probability of given observation.
+        """
+
     def decode(self, ob_list, time):
         """Use viterbi algorithm to find the state sequence for a given observation list.
 
