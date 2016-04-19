@@ -14,6 +14,7 @@ class HMM:
         self._ob_prob = [[1/self._ob_num for j in range(self._ob_num)] for i in range(self.state_num)] \
             if not observation_probability else observation_probability
         self._forward_prob = []
+        self._backward_prob = []
 
     def forward(self, ob_list, time):
         """Use forward algorithm to evaluate probability of a given observation.
@@ -58,6 +59,25 @@ class HMM:
         -------
         p : float, Probability of given observation.
         """
+        if time > len(ob_list):
+            raise IndexError("Time cannot be more than length of observation list.")
+
+        ob_list = self._get_ob_index(ob_list)  # Transform observation to index
+        # Initialize the probability
+        backward_prob = [[1 for i in range(self.state_num)] for t in range(time)]
+
+        for t in range(time-2, -1, -1):
+            for i in range(self.state_num):
+                # Calculate probability that following state probability back to present state probability.
+                p = sum([backward_prob[t+1][j] * self._state_prob[i][j] * self._ob_prob[j][ob_list[t+1]] \
+                         for j in range(self.state_num)])
+                backward_prob[t][i] = p
+        # Record in class attribute
+        self._backward_prob = backward_prob
+        # Return the probability from last time to first time (need to multiply the probability from time0 to time1)
+        return sum([self._init_prob[i] * self._ob_prob[i][ob_list[0]] * backward_prob[0][i] \
+                    for i in range(self.state_num)])
+
 
     def decode(self, ob_list, time):
         """Use viterbi algorithm to find the state sequence for a given observation list.
@@ -118,6 +138,7 @@ def main():
     p = hmm.forward(observation, ob_length)
     path = hmm.decode(observation, ob_length)
     print("P{} = {:.13f}".format(tuple(observation), p))
+    print("P{} = {:.13f}".format(tuple(observation), hmm.backward(observation, ob_length)))
     print("Observation sequence =", tuple(i+1 for i in path))
 
 if __name__ == '__main__':
