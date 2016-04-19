@@ -13,6 +13,7 @@ class HMM:
         # Every state's observation probability
         self._ob_prob = [[1/self._ob_num for j in range(self._ob_num)] for i in range(self.state_num)] \
             if not observation_probability else observation_probability
+        self._forward_prob = []
 
     def forward(self, ob_list, time):
         """Use forward algorithm to evaluate probability of a given observation.
@@ -31,19 +32,19 @@ class HMM:
 
         ob_list = self._get_ob_index(ob_list)  # Transform observation to index
         # Calculate probability of first observation for every state
-        prob_list = self._initial_ob_prob(ob_list[0])
-        pre_prob = prob_list[:]
+        forward_prob = [self._initial_ob_prob(ob_list[0])]
 
         for t in range(1, time):
+            forward_prob.append([])
             for j in range(self.state_num):
                 # Calculate probability that previous state probability transit to present state probability
-                p = sum([pre_prob[i] * self._state_prob[i][j] for i in range(self.state_num)])
+                p = sum([forward_prob[t-1][i] * self._state_prob[i][j] for i in range(self.state_num)])
                 # Calculate probability that present state to present observation
-                prob_list[j] = p * self._ob_prob[j][ob_list[t]]
-            # Record for changed probability
-            pre_prob = prob_list[:]
-        
-        return sum(prob_list)
+                forward_prob[t].append(p * self._ob_prob[j][ob_list[t]])
+        # Record in class attribute
+        self._forward_prob = forward_prob
+
+        return sum(forward_prob[time-1])
 
     def decode(self, ob_list, time):
         """Use viterbi algorithm to find the state sequence for a given observation list.
