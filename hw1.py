@@ -1,13 +1,18 @@
 class HMM:
     """Simple implement for Hidden Markov Model"""
-    def __init__(self, state_num, observation_list):
+    def __init__(self, state_num, observation_list, initial_probability=None, transition_probability=None, observation_probability=None):
         self.state_num = state_num
-        self.init_prob = [0 for i in range(state_num)]                                  # Initial probability for choosing first state
-        self.state = [i for i in range(state_num)]
-        self.state_prob = [[0 for j in range(state_num)] for i in range(state_num)]     # Every state's transition probability
-        self.ob_list = observation_list
-        self.ob_num = len(observation_list)
-        self.ob_prob = [[0 for j in range(self.ob_num)] for i in range(self.state_num)] # Every state's observation probability
+        # Initial probability for choosing first state
+        self._init_prob = [0 for i in range(state_num)] if not initial_probability else initial_probability
+        self._state = [i for i in range(state_num)]
+        # Every state's transition probability
+        self._state_prob = [[(1/self.state_num) for j in range(state_num)] for i in range(state_num)] \
+            if not transition_probability else transition_probability
+        self._ob_list = observation_list
+        self._ob_num = len(observation_list)
+        # Every state's observation probability
+        self._ob_prob = [[1/self._ob_num for j in range(self._ob_num)] for i in range(self.state_num)] \
+            if not observation_probability else observation_probability
 
     def forward(self, ob_list, time):
         """Use forward algorithm to evaluate probability of a given observation.
@@ -32,9 +37,9 @@ class HMM:
         for t in range(1, time):
             for j in range(self.state_num):
                 # Calculate probability that previous state probability transit to present state probability
-                p = sum([pre_prob[i] * self.state_prob[i][j] for i in range(self.state_num)])
+                p = sum([pre_prob[i] * self._state_prob[i][j] for i in range(self.state_num)])
                 # Calculate probability that present state to present observation
-                prob_list[j] = p * self.ob_prob[j][ob_list[t]]
+                prob_list[j] = p * self._ob_prob[j][ob_list[t]]
             # Record for changed probability
             pre_prob = prob_list[:]
         
@@ -64,9 +69,9 @@ class HMM:
             new_path = [[] for i in range(self.state_num)]
             for j in range(self.state_num):
                 # Find maximum probability and the most possible previous state to transit to present state
-                p, state = max([(pre_prob[i] * self.state_prob[i][j], i) for i in range(self.state_num)])
+                p, state = max([(pre_prob[i] * self._state_prob[i][j], i) for i in range(self.state_num)])
                 # Calculate probability that present state to present observation
-                max_prob[j] = p * self.ob_prob[j][ob_list[t]]
+                max_prob[j] = p * self._ob_prob[j][ob_list[t]]
                 # Choose the most possible path to present state
                 new_path[j] = path[state] + [j]
             # Record for changed probability
@@ -79,20 +84,21 @@ class HMM:
         return path[state]
 
     def _get_ob_index(self, observation):
-        return [self.ob_list.index(i) for i in observation]  # Transform observation to index
+        return [self._ob_list.index(i) for i in observation]  # Transform observation to index
 
     def _initial_ob_prob(self, ob_index):
-        return [self.init_prob[i] * self.ob_prob[i][ob_index] for i in range(self.state_num)]
+        return [self._init_prob[i] * self._ob_prob[i][ob_index] for i in range(self.state_num)]
 
 def main():
-    hmm = HMM(3, ('up', 'down', 'unchanged'))
-    hmm.init_prob = [0.5, 0.2, 0.3]
-    hmm.state_prob = [[0.6, 0.2, 0.2],
-                      [0.5, 0.3, 0.2],
-                      [0.4, 0.1, 0.5]]
-    hmm.ob_prob = [[0.7, 0.1, 0.2],
-                   [0.1, 0.6, 0.3],
-                   [0.3, 0.3, 0.4]]
+    hmm = HMM(3, ('up', 'down', 'unchanged'),
+              initial_probability=[0.5, 0.2, 0.3],
+              transition_probability=[[0.6, 0.2, 0.2],
+                                      [0.5, 0.3, 0.2],
+                                      [0.4, 0.1, 0.5]],
+              observation_probability=[[0.7, 0.1, 0.2],
+                                       [0.1, 0.6, 0.3],
+                                       [0.3, 0.3, 0.4]])
+
     observation = ("up", "up", "unchanged", "down", "unchanged", "down", "up")
     ob_length = len(observation)
     p = hmm.forward(observation, ob_length)
@@ -102,3 +108,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
