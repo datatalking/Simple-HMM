@@ -1,6 +1,7 @@
 class HMM:
     """Simple implement for Hidden Markov Model"""
-    def __init__(self, state_num, observation_list, initial_probability=None, transition_probability=None, observation_probability=None):
+    def __init__(self, state_num, observation_list,
+                 initial_probability=None, transition_probability=None, observation_probability=None):
         self.state_num = state_num
         # Initial probability for choosing first state
         self._init_prob = [0 for i in range(state_num)] if not initial_probability else initial_probability
@@ -69,15 +70,14 @@ class HMM:
         for t in range(time-2, -1, -1):
             for i in range(self.state_num):
                 # Calculate probability that following state probability back to present state probability.
-                p = sum([backward_prob[t+1][j] * self._state_prob[i][j] * self._ob_prob[j][ob_list[t+1]] \
+                p = sum([backward_prob[t+1][j] * self._state_prob[i][j] * self._ob_prob[j][ob_list[t+1]]
                          for j in range(self.state_num)])
                 backward_prob[t][i] = p
         # Record in class attribute
         self._backward_prob = backward_prob
         # Return the probability from last time to first time (need to multiply the probability from time0 to time1)
-        return sum([self._init_prob[i] * self._ob_prob[i][ob_list[0]] * backward_prob[0][i] \
+        return sum([self._init_prob[i] * self._ob_prob[i][ob_list[0]] * backward_prob[0][i]
                     for i in range(self.state_num)])
-
 
     def decode(self, ob_list, time):
         """Use viterbi algorithm to find the state sequence for a given observation list.
