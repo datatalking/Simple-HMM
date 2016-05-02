@@ -123,6 +123,8 @@ class HMM:
         Returns
         -------
         """
+        # The probability of initial state i
+        initial_state_prob = [0 for i in range(self.state_num)]
         # The probability of every path which pass through state i
         all_state_prob = [0 for i in range(self.state_num)]   # gamma
         # The probability of every path which pass by route from state i to state j
@@ -131,6 +133,29 @@ class HMM:
         for data in data_sets:
             _, forward_prob = self.forward(data, len(data))
             _, backward_prob = self.backward(data, len(data))
+            data = self._get_ob_index(data)
+            for t, ob in enumerate(data):
+                p = sum([forward_prob[t][i] * backward_prob[t][i] for i in self.state_num])
+                for i in range(self.state_num):
+                    try:
+                        all_state_prob[i] += forward_prob[t][i] * backward_prob[t][i] / p
+                    except:
+                        print(data_sets.index(data)+1)
+                    if t == 0:
+                        initial_state_prob = all_state_prob.copy()
+
+                if t != len(data)-1:
+                    p = sum([sum([forward_prob[t][i] * self._state_prob[i][j] *
+                                  self._ob_prob[j][data[t+1]] * backward_prob[t+1][j]
+                                  for j in range(self.state_num)])
+                             for i in range(self.state_num)])
+                    for i in range(self.state_num):
+                        for j in range(self.state_num):
+                            try:
+                                all_stateset_prob[i][j] += forward_prob[t][i] * self._state_prob[i][j] * \
+                                                       self._ob_prob[j][data[t+1]] * backward_prob[t+1][j] / p
+                            except ZeroDivisionError:
+                                print(data_sets.index(data)+1)
 
     def _get_ob_index(self, observation):
         return [self._ob_list.index(i) for i in observation]  # Transform observation to index
