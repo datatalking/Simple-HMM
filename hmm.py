@@ -113,6 +113,17 @@ class HMM:
         
         return path[state]
 
+    def train(self):
+        """Use EM algorithm to train models.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        """
+        pass
+
     def _get_ob_index(self, observation):
         return [self._ob_list.index(i) for i in observation]  # Transform observation to index
 
