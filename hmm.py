@@ -113,16 +113,24 @@ class HMM:
         
         return path[state]
 
-    def train(self):
+    def train(self, data_sets):
         """Use EM algorithm to train models.
 
         Parameters
         ----------
+        data_sets : array-like, A array of observation list.
 
         Returns
         -------
         """
-        pass
+        # The probability of every path which pass through state i
+        all_state_prob = [0 for i in range(self.state_num)]   # gamma
+        # The probability of every path which pass by route from state i to state j
+        all_stateset_prob = [[0 for j in range(self.state_num)] for i in range(self.state_num)] # xi
+
+        for data in data_sets:
+            _, forward_prob = self.forward(data, len(data))
+            _, backward_prob = self.backward(data, len(data))
 
     def _get_ob_index(self, observation):
         return [self._ob_list.index(i) for i in observation]  # Transform observation to index
