@@ -13,10 +13,9 @@ def main():
 
     observation = ("up", "up", "unchanged", "down", "unchanged", "down", "up")
     ob_length = len(observation)
-    p = hmm.forward(observation, ob_length)
+    p, _ = hmm.forward(observation, ob_length)
     path = hmm.decode(observation, ob_length)
     print("P{} = {:.13f}".format(tuple(observation), p))
-    print("P{} = {:.13f}".format(tuple(observation), hmm.backward(observation, ob_length)))
     print("Observation sequence =", tuple(i+1 for i in path))
 
 if __name__ == '__main__':

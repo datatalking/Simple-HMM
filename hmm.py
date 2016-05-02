@@ -14,8 +14,6 @@ class HMM:
         # Every state's observation probability
         self._ob_prob = [[1/self._ob_num for j in range(self._ob_num)] for i in range(self.state_num)] \
             if not observation_probability else observation_probability
-        self._forward_prob = []
-        self._backward_prob = []
 
     def forward(self, ob_list, time):
         """Use forward algorithm to evaluate probability of a given observation.
@@ -28,6 +26,7 @@ class HMM:
         Returns
         -------
         p : float, Probability of given observation.
+        prob_list : array, Forward probability in every time stamp.
         """
         if time > len(ob_list):
             raise IndexError("Time cannot be more than length of observation list.")
@@ -43,10 +42,8 @@ class HMM:
                 p = sum([forward_prob[t-1][i] * self._state_prob[i][j] for i in range(self.state_num)])
                 # Calculate probability that present state to present observation
                 forward_prob[t].append(p * self._ob_prob[j][ob_list[t]])
-        # Record in class attribute
-        self._forward_prob = forward_prob
 
-        return sum(forward_prob[time-1])
+        return sum(forward_prob[time-1]), forward_prob
 
     def backward(self, ob_list, time):
         """Use backward algorithm to evaluate probability of a given observation.
@@ -59,6 +56,7 @@ class HMM:
         Returns
         -------
         p : float, Probability of given observation.
+        prob_list : array, Backward probability in every time stamp.
         """
         if time > len(ob_list):
             raise IndexError("Time cannot be more than length of observation list.")
@@ -73,11 +71,9 @@ class HMM:
                 p = sum([backward_prob[t+1][j] * self._state_prob[i][j] * self._ob_prob[j][ob_list[t+1]]
                          for j in range(self.state_num)])
                 backward_prob[t][i] = p
-        # Record in class attribute
-        self._backward_prob = backward_prob
         # Return the probability from last time to first time (need to multiply the probability from time0 to time1)
         return sum([self._init_prob[i] * self._ob_prob[i][ob_list[0]] * backward_prob[0][i]
-                    for i in range(self.state_num)])
+                    for i in range(self.state_num)]), backward_prob
 
     def decode(self, ob_list, time):
         """Use viterbi algorithm to find the state sequence for a given observation list.
