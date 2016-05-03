@@ -200,6 +200,10 @@ class HMM:
 
     @staticmethod
     def _log_sum(sequence):
+        """
+        :param sequence: array-like, The log number need to be add like log(p+q)
+        :return: integer, After calculate log(p+q)
+        """
         start = sequence[0]
         for value in sequence[1:]:
             if start < value:
