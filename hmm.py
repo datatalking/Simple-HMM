@@ -123,39 +123,68 @@ class HMM:
         Returns
         -------
         """
-        # The probability of initial state i
-        initial_state_prob = [0 for i in range(self.state_num)]
+        size = len(data_sets)
         # The probability of every path which pass through state i
-        all_state_prob = [0 for i in range(self.state_num)]   # gamma
+        all_state_prob = []   # gamma
         # The probability of every path which pass by route from state i to state j
-        all_stateset_prob = [[0 for j in range(self.state_num)] for i in range(self.state_num)] # xi
+        all_stateset_prob = []  # xi
+        #initial_prob = [0 for i in range(self.state_num)]
+        #state_prob = [[0 for j in range(self.state_num)] for i in range(self.state_num)]
 
         for data in data_sets:
-            _, forward_prob = self.forward(data, len(data))
-            _, backward_prob = self.backward(data, len(data))
-            data = self._get_ob_index(data)
-            for t, ob in enumerate(data):
-                p = sum([forward_prob[t][i] * backward_prob[t][i] for i in self.state_num])
-                for i in range(self.state_num):
-                    try:
-                        all_state_prob[i] += forward_prob[t][i] * backward_prob[t][i] / p
-                    except:
-                        print(data_sets.index(data)+1)
-                    if t == 0:
-                        initial_state_prob = all_state_prob.copy()
+            time = len(data)
+            # The probability of every path which pass through state i
+            state_prob = [0 for i in range(self.state_num)]
+            state_prob = [state_prob for l in range(time)]    # gamma
+            # The probability of every path which pass by route from state i to state j
+            state_set_prob = [[0 for j in range(self.state_num)] for i in range(self.state_num)]
+            state_set_prob = [state_set_prob for l in range(time)]    # xi
 
-                if t != len(data)-1:
+            _, forward_prob = self.forward(data, time)
+            _, backward_prob = self.backward(data, time)
+            data = self._get_ob_index(data)
+
+            for t, ob in enumerate(data):
+                p = sum([forward_prob[t][i] * backward_prob[t][i] for i in range(self.state_num)])
+                for i in range(self.state_num):
+                    state_prob[t][i] = forward_prob[t][i] * backward_prob[t][i] / p
+
+                if t != time-1:
                     p = sum([sum([forward_prob[t][i] * self._state_prob[i][j] *
                                   self._ob_prob[j][data[t+1]] * backward_prob[t+1][j]
                                   for j in range(self.state_num)])
                              for i in range(self.state_num)])
                     for i in range(self.state_num):
                         for j in range(self.state_num):
-                            try:
-                                all_stateset_prob[i][j] += forward_prob[t][i] * self._state_prob[i][j] * \
-                                                       self._ob_prob[j][data[t+1]] * backward_prob[t+1][j] / p
-                            except ZeroDivisionError:
-                                print(data_sets.index(data)+1)
+                            state_set_prob[t][i][j] = forward_prob[t][i] * self._state_prob[i][j] * \
+                                                      self._ob_prob[j][data[t+1]] * backward_prob[t+1][j] / p
+
+            all_state_prob.append(state_prob)
+            all_stateset_prob.append(state_set_prob)
+
+        self._init_prob = [sum([all_state_prob[l][0][i] / size for l in range(size)]) for i in range(self.state_num)]
+        for i in range(self.state_num):
+            p2 = 0
+            """p = 0
+            for x in all_state_prob:
+                p+=sum(x[0:-1][i])"""
+            p = [0 for i in range(self._ob_num)]
+            for s, x in enumerate(all_state_prob):
+                for t, y in enumerate(x):
+                    ob_ind = self._ob_list.index(data_sets[s][t])
+                    p[ob_ind] += y[i]
+                    p2 += y[i]
+
+            for j in range(self.state_num):
+                p1 = 0
+                for prob_list in all_stateset_prob:
+                    for prob in prob_list[:-1]:
+                        p1 += prob[i][j]
+                self._state_prob[i][j] = p1 / p2
+
+            for j in range(self._ob_num):
+                self._ob_prob[i][j] = p[j] / p2
+
 
     def _get_ob_index(self, observation):
         return [self._ob_list.index(i) for i in observation]  # Transform observation to index
