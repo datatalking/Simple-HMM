@@ -1,3 +1,6 @@
+from math import log, exp
+
+
 class HMM:
     """Simple implement for Hidden Markov Model"""
     def __init__(self, state_num, observation_list,
@@ -14,6 +17,10 @@ class HMM:
         # Every state's observation probability
         self._ob_prob = [[1/self._ob_num for j in range(self._ob_num)] for i in range(self.state_num)] \
             if not observation_probability else observation_probability
+        # Translate probability to log
+        self._init_prob = [log(p) for p in self._init_prob]
+        self._state_prob = [[log(p) for p in state] for state in self._state_prob]
+        self._ob_prob = [[log(p) for p in state] for state in self._ob_prob]
 
     def forward(self, ob_list, time):
         """Use forward algorithm to evaluate probability of a given observation.
@@ -185,9 +192,20 @@ class HMM:
             for j in range(self._ob_num):
                 self._ob_prob[i][j] = p[j] / p2
 
-
     def _get_ob_index(self, observation):
         return [self._ob_list.index(i) for i in observation]  # Transform observation to index
 
     def _initial_ob_prob(self, ob_index):
         return [self._init_prob[i] * self._ob_prob[i][ob_index] for i in range(self.state_num)]
+
+    @staticmethod
+    def _log_sum(sequence):
+        start = sequence[0]
+        for value in sequence[1:]:
+            if start < value:
+                start, value = value, start
+            if start == 0 and value == 0:
+                start = log(exp(start), exp(value))
+            else:
+                start += log(1 + exp(value-start))
+        return start
