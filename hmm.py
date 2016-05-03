@@ -46,11 +46,11 @@ class HMM:
             forward_prob.append([])
             for j in range(self.state_num):
                 # Calculate probability that previous state probability transit to present state probability
-                p = sum([forward_prob[t-1][i] * self._state_prob[i][j] for i in range(self.state_num)])
+                p = self._log_sum([forward_prob[t-1][i] + self._state_prob[i][j] for i in range(self.state_num)])
                 # Calculate probability that present state to present observation
-                forward_prob[t].append(p * self._ob_prob[j][ob_list[t]])
+                forward_prob[t].append(p + self._ob_prob[j][ob_list[t]])
 
-        return sum(forward_prob[time-1]), forward_prob
+        return exp(self._log_sum(forward_prob[time-1])), forward_prob
 
     def backward(self, ob_list, time):
         """Use backward algorithm to evaluate probability of a given observation.
@@ -70,17 +70,17 @@ class HMM:
 
         ob_list = self._get_ob_index(ob_list)  # Transform observation to index
         # Initialize the probability
-        backward_prob = [[1 for i in range(self.state_num)] for t in range(time)]
+        backward_prob = [[log(1) for i in range(self.state_num)] for t in range(time)]
 
         for t in range(time-2, -1, -1):
             for i in range(self.state_num):
                 # Calculate probability that following state probability back to present state probability.
-                p = sum([backward_prob[t+1][j] * self._state_prob[i][j] * self._ob_prob[j][ob_list[t+1]]
-                         for j in range(self.state_num)])
+                p = self._log_sum([backward_prob[t+1][j] + self._state_prob[i][j] + self._ob_prob[j][ob_list[t+1]]
+                                   for j in range(self.state_num)])
                 backward_prob[t][i] = p
         # Return the probability from last time to first time (need to multiply the probability from time0 to time1)
-        return sum([self._init_prob[i] * self._ob_prob[i][ob_list[0]] * backward_prob[0][i]
-                    for i in range(self.state_num)]), backward_prob
+        return exp(self._log_sum([self._init_prob[i] + self._ob_prob[i][ob_list[0]] + backward_prob[0][i]
+                                  for i in range(self.state_num)])), backward_prob
 
     def decode(self, ob_list, time):
         """Use viterbi algorithm to find the state sequence for a given observation list.
@@ -106,9 +106,9 @@ class HMM:
             new_path = [[] for i in range(self.state_num)]
             for j in range(self.state_num):
                 # Find maximum probability and the most possible previous state to transit to present state
-                p, state = max([(pre_prob[i] * self._state_prob[i][j], i) for i in range(self.state_num)])
+                p, state = max([(pre_prob[i] + self._state_prob[i][j], i) for i in range(self.state_num)])
                 # Calculate probability that present state to present observation
-                max_prob[j] = p * self._ob_prob[j][ob_list[t]]
+                max_prob[j] = p + self._ob_prob[j][ob_list[t]]
                 # Choose the most possible path to present state
                 new_path[j] = path[state] + [j]
             # Record for changed probability
@@ -196,7 +196,7 @@ class HMM:
         return [self._ob_list.index(i) for i in observation]  # Transform observation to index
 
     def _initial_ob_prob(self, ob_index):
-        return [self._init_prob[i] * self._ob_prob[i][ob_index] for i in range(self.state_num)]
+        return [self._init_prob[i] + self._ob_prob[i][ob_index] for i in range(self.state_num)]
 
     @staticmethod
     def _log_sum(sequence):
@@ -211,5 +211,5 @@ class HMM:
             if start == 0 and value == 0:
                 start = log(exp(start), exp(value))
             else:
-                start += log(1 + exp(value-start))
+                start += log(1 + exp(value - start))
         return start
