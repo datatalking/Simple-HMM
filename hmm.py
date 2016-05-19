@@ -135,62 +135,116 @@ class HMM:
         all_state_prob = []   # gamma
         # The probability of every path which pass by route from state i to state j
         all_stateset_prob = []  # xi
-        #initial_prob = [0 for i in range(self.state_num)]
-        #state_prob = [[0 for j in range(self.state_num)] for i in range(self.state_num)]
+        # initial_prob = [0 for i in range(self.state_num)]
+        # state_prob = [[0 for j in range(self.state_num)] for i in range(self.state_num)]
 
         for data in data_sets:
             time = len(data)
             # The probability of every path which pass through state i
-            state_prob = [0 for i in range(self.state_num)]
-            state_prob = [state_prob for l in range(time)]    # gamma
+            state_prob = [-1e10 for i in range(self.state_num)]
+            state_prob = [state_prob for t in range(time)]    # gamma
             # The probability of every path which pass by route from state i to state j
-            state_set_prob = [[0 for j in range(self.state_num)] for i in range(self.state_num)]
-            state_set_prob = [state_set_prob for l in range(time)]    # xi
+            state_set_prob = [[-1e10 for j in range(self.state_num)] for i in range(self.state_num)]
+            state_set_prob = [state_set_prob for t in range(time)]    # xi
 
             _, forward_prob = self.forward(data, time)
             _, backward_prob = self.backward(data, time)
             data = self._get_ob_index(data)
 
             for t, ob in enumerate(data):
-                p = sum([forward_prob[t][i] * backward_prob[t][i] for i in range(self.state_num)])
+                # p += α[t][i] * β[t][i]
+                p = self._log_sum([forward_prob[t][i] + backward_prob[t][i] for i in range(self.state_num)])
+                # γ[t][i] = α[t][i] * β[t][i] / p
                 for i in range(self.state_num):
-                    state_prob[t][i] = forward_prob[t][i] * backward_prob[t][i] / p
+                    state_prob[t][i] = forward_prob[t][i] + backward_prob[t][i] - p
 
-                if t != time-1:
-                    p = sum([sum([forward_prob[t][i] * self._state_prob[i][j] *
-                                  self._ob_prob[j][data[t+1]] * backward_prob[t+1][j]
-                                  for j in range(self.state_num)])
-                             for i in range(self.state_num)])
+                if t < time-1:
+                    # p += α[t][i] * a[i][j] * b[j][o[t+1]] * β[t+1][j]
+                    p = self._log_sum([forward_prob[t][i] + self._state_prob[i][j] +
+                                       self._ob_prob[j][data[t+1]] + backward_prob[t+1][j]
+                                       for i in range(self.state_num) for j in range(self.state_num)])
+                    # ξ[t][i][j] = α[t][i] * a[i][j] * b[j][o[t+1]] * β[t+1][j] / p;
                     for i in range(self.state_num):
                         for j in range(self.state_num):
-                            state_set_prob[t][i][j] = forward_prob[t][i] * self._state_prob[i][j] * \
-                                                      self._ob_prob[j][data[t+1]] * backward_prob[t+1][j] / p
+                            state_set_prob[t][i][j] = forward_prob[t][i] + self._state_prob[i][j] + \
+                                                     self._ob_prob[j][data[t+1]] + backward_prob[t+1][j] - p
+            # Update initial probability
+            """
+            self._init_prob = [state_prob[0][i] for i in range(self.state_num)]
+
+            # Update state transition probability
+            for i in range(self.state_num):
+                p2 = self._log_sum([state_prob[t][i] for t in range(time-1)])
+                for j in range(self.state_num):
+                    p1 = self._log_sum([state_set_prob[t][i][j] for t in range(time-1)])
+                    self._state_prob[i][j] = p1 - p2
+
+            # Update observation probability
+            for i in range(self.state_num):
+                p = [-1e10 for o in range(self._ob_num)]
+                p2 = self._log_sum([state_prob[t][i] for t in range(time)])
+                for t in range(time):
+                    p[data[t]] = self._log_sum([p[data[t]], state_prob[t][i]])
+
+                for j in range(self._ob_num):
+                    self._ob_prob[i][j] = p[j] - p2
+    """
 
             all_state_prob.append(state_prob)
             all_stateset_prob.append(state_set_prob)
-
-        self._init_prob = [sum([all_state_prob[l][0][i] / size for l in range(size)]) for i in range(self.state_num)]
+        pi = [self._log_sum([all_state_prob[l][0][i] for l in range(size)]) - log(size)
+              for i in range(self.state_num)]
+        print("pi:", pi)
+        a = [[-1e10 for i in range(self.state_num)] for j in range(self.state_num)]
+        b = [[-1e10 for o in range(self._ob_num)] for j in range(self.state_num)]
         for i in range(self.state_num):
-            p2 = 0
-            """p = 0
+            p2 = self._log_sum([all_state_prob[l][t][i] for l in range(size) for t in range(len(data_sets[l]) - 1)])
+            for j in range(self.state_num):
+                p1 = self._log_sum([all_stateset_prob[l][t][i][j]
+                                    for l in range(size) for t in range(len(data_sets[l]) - 1)])
+                print([all_stateset_prob[l][t][i][j] for l in range(size) for t in range(len(data_sets[l]) - 1)])
+                a[i][j] = p1 - p2
+
+        for i in range(self.state_num):
+            p = [-1e10 for o in range(self._ob_num)]
+            p2 = self._log_sum([all_state_prob[l][t][i] for l in range(size) for t in range(len(data_sets[l]))])
+            for l in range(size):
+                for t in range(len(data_sets[l])):
+                    ob_ind = self._ob_list.index(data_sets[l][t])
+                    p[ob_ind] = self._log_sum([p[ob_ind], all_state_prob[l][t][i]])
+
+            for j in range(self._ob_num):
+                b[i][j] = p[j] - p2
+
+        self._init_prob = pi
+        self._state_prob = a
+        self._ob_prob = b
+        """
+        self._init_prob = [self._log_sum([all_state_prob[l][0][i] - log(size)
+                                          for l in range(size)])
+                           for i in range(self.state_num)]
+        for i in range(self.state_num):
+            p2 = -1.0E10
+            p = 0
             for x in all_state_prob:
-                p+=sum(x[0:-1][i])"""
-            p = [0 for i in range(self._ob_num)]
+                p+=sum(x[0:-1][i])
+            p = [-1.0E10 for i in range(self._ob_num)]
             for s, x in enumerate(all_state_prob):
                 for t, y in enumerate(x):
                     ob_ind = self._ob_list.index(data_sets[s][t])
-                    p[ob_ind] += y[i]
-                    p2 += y[i]
+                    p[ob_ind] = self._log_sum((p[ob_ind], y[i]))
+                    p2 = self._log_sum((p2, y[i]))
 
             for j in range(self.state_num):
-                p1 = 0
+                p1 = -1.0E10
                 for prob_list in all_stateset_prob:
                     for prob in prob_list[:-1]:
-                        p1 += prob[i][j]
-                self._state_prob[i][j] = p1 / p2
+                        p1 = self._log_sum((p1, prob[i][j]))
+                self._state_prob[i][j] = p1 - p2
 
             for j in range(self._ob_num):
-                self._ob_prob[i][j] = p[j] / p2
+                self._ob_prob[i][j] = p[j] - p2
+        """
 
     def _get_ob_index(self, observation):
         return [self._ob_list.index(i) for i in observation]  # Transform observation to index
@@ -209,7 +263,7 @@ class HMM:
             if start < value:
                 start, value = value, start
             if start == 0 and value == 0:
-                start = log(exp(start), exp(value))
+                start = log(exp(start) + exp(value))
             else:
                 start += log(1 + exp(value - start))
         return start
